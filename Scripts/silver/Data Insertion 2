@@ -1,0 +1,127 @@
+use sql_datawarehouse_project;
+
+select * from bronze.crm_cust_info;
+
+-- Removing the null values in cst_id
+
+select cst_id,count(*) from bronze.crm_cust_info
+group by cst_id 
+having count(cst_id) >1 or cst_id is null
+
+-- 
+
+select * from
+(
+select *,
+row_number() over(partition by cst_id order by cst_create_date DESC) as rank_by_create_date
+from  bronze.crm_cust_info
+) as t
+where rank_by_create_date=1 and cst_id is not null;
+
+
+-- removing the extra spaces in cst_firstname and lastname
+
+
+select cst_id,cst_key,
+trim(cst_firstname) as cst_firstname,
+trim(cst_lastname) as cst_lastname from bronze.crm_cust_info;
+
+-- Triming and Changing the cst_marital_status
+
+select cst_id, cst_key,
+case
+when upper(trim(cst_marital_status)) = 'S' then 'Single'
+when upper(trim(cst_marital_status)) = 'M' then 'Married'
+end AS cst_marital_status
+from bronze.crm_cust_info;
+
+-- Triming and Changing the cst_gndr
+
+select cst_id,cst_key,
+case 
+when upper(trim(cst_gndr)) = 'M' then 'Male'
+when upper(trim(cst_gndr)) = 'F' then 'Female'
+end as cst_gndr
+from bronze.crm_cust_info;
+
+select * from bronze.crm_cust_info;
+
+
+select cst_id,cst_key,
+trim(cst_firstname) as cst_firstname,
+trim(cst_lastname) as cst_lastname,
+case
+when upper(trim(cst_marital_status)) = 'S' then 'Single'
+when upper(trim(cst_marital_status)) = 'M' then 'Married'
+end AS cst_marital_status,
+case
+when upper(trim(cst_gndr)) = 'M' then 'Male'
+when upper(trim(cst_gndr)) = 'F' then 'Female'
+end as cst_gndr
+from (
+select *,
+row_number() over(partition by cst_id order by cst_create_date DESC) as rank_by_create_date
+from  bronze.crm_cust_info
+) as t
+where rank_by_create_date=1 and cst_id is not null;
+
+
+select * from bronze.crm_prd_info;
+
+
+
+
+
+
+SELECT 
+prd_id,
+REPLACE(SUBSTRING(prd_key,1,5),'-','_') as Cat_id,
+SUBSTRING(prd_key,7, LEN(prd_key) ) as prd_key,
+prd_nm,
+ISNULL(prd_cost,0) as prd_cost
+from bronze.crm_prd_info
+
+
+
+
+
+select prd_id,
+ISNULL(prd_cost,0) as prd_cost,
+CASE 
+WHEN UPPER(TRIM(prd_line)) = 'M' THEN 'Mountain'
+WHEN UPPER(TRIM(prd_line)) = 'R' THEN 'Road'
+WHEN UPPER(TRIM(prd_line)) = 'S' THEN 'Other Sales'
+WHEN UPPER(TRIM(prd_line)) = 'T' THEN 'Touring'
+ELSE 'n/a'
+END AS prd_line
+from bronze.crm_prd_info
+
+
+
+-- Calculate end date as one day before the next start date
+
+
+select prd_id,prd_key,
+CAST(prd_start_dt AS DATE) AS prd_start_dt,
+CAST( LEAD(prd_start_dt) OVER (PARTITION BY prd_key ORDER BY prd_start_dt) - 1  AS DATE) AS prd_end_dt 
+from bronze.crm_prd_info
+
+
+
+
+SELECT 
+prd_id,
+REPLACE(SUBSTRING(prd_key,1,5),'-','_') as Cat_id,
+SUBSTRING(prd_key,7, LEN(prd_key) ) as prd_key,
+prd_nm,
+ISNULL(prd_cost,0) as prd_cost,
+CASE 
+				WHEN UPPER(TRIM(prd_line)) = 'M' THEN 'Mountain'
+				WHEN UPPER(TRIM(prd_line)) = 'R' THEN 'Road'
+				WHEN UPPER(TRIM(prd_line)) = 'S' THEN 'Other Sales'
+				WHEN UPPER(TRIM(prd_line)) = 'T' THEN 'Touring'
+				ELSE 'n/a'
+			END AS prd_line,
+CAST(prd_start_dt AS DATE) AS prd_start_dt,
+CAST( LEAD(prd_start_dt) OVER (PARTITION BY prd_key ORDER BY prd_start_dt) - 1  AS DATE) AS prd_end_dt 
+from bronze.crm_prd_info
